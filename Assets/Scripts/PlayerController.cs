@@ -18,7 +18,7 @@ public class PlayerController : MonoBehaviour
         player = GetComponent<Player>();
     }
     
-    private void Update()
+    private void FixedUpdate()
     {
         Vector2 vec = move_Action.ReadValue<Vector2>();
         MovePlayer(vec);
