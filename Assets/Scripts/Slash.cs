@@ -2,21 +2,14 @@ using UnityEngine;
 
 public class Slash : Skill
 {
-    private BoxCollider2D boxCollider;
-
     private void Start()
     {
         base.Init();
-
-        boxCollider = GetComponent<BoxCollider2D>();
+        projectile = Resources.Load<GameObject>("SlashProjectile");
     }
 
     private void FixedUpdate()
     {
-        //애니메이션 종료 시 sprite 비활성화
-        if(animator.GetCurrentAnimatorStateInfo(0).normalizedTime >= 1f)
-            spriteRenderer.enabled = false;
-
         //쿨타임마다 스킬 발동
         if (current_Time >= cool_Time)
         {
@@ -28,8 +21,13 @@ public class Slash : Skill
 
     protected override void EnableSkill()
     {
-        spriteRenderer.enabled = true;
-        animator.SetTrigger("Slash");
-    }
+        GameObject newSlash = CreateProjectile();
 
+        //생성 위치 조정
+        newSlash.transform.position = this.transform.position;
+
+        //플레이어가 반전된 상태인 경우 똑같이 반전
+        Vector3 newscale = player.transform.localScale;
+        newSlash.transform.localScale = newscale;
+    }
 }
