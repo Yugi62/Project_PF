@@ -14,7 +14,7 @@ GameObject:
   - component: {fileID: 2259464549368811250}
   - component: {fileID: 2566835963036759884}
   - component: {fileID: 3108422075990140403}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Player
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -166,6 +166,7 @@ MonoBehaviour:
   _attack_Damage: 1
   _defensive_Power: 1
   _movement_Speed: 0.1
+  EXP_UI: {fileID: 0}
   _player_Level: 1
   _current_XP: 0
   _required_XP: 10

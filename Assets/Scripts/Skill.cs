@@ -3,20 +3,14 @@ using UnityEngine;
 
 public abstract class Skill : MonoBehaviour
 {
-    [SerializeField] private float _skill_Coefficient;      //스킬계수
-    [SerializeField] private float _cool_Time;              //쿨타임
+    [SerializeField] private float _skill_Coefficient;          //스킬 계수
+    [SerializeField] private float _skill_Speed;                //스킬 속도 (=투사체 발사 속도로 없는 경우 0f)
+    [SerializeField] private float _cool_Time;                  //쿨타임
 
     protected float cool_Time { get { return _cool_Time; } }
 
-    protected Player player;
-    protected GameObject projectile;
-    protected float current_Time;
-
-    protected void Init()
-    {
-        player = GetComponentInParent<Player>();
-        current_Time = 0f;
-    }
+    protected GameObject projectile;                            //투사체 오브젝트
+    protected float timerTime = 0f;                             //쿨타임 계산용 float
 
     protected abstract void EnableSkill();
 
@@ -26,10 +20,10 @@ public abstract class Skill : MonoBehaviour
         GameObject newProjectile = Instantiate(projectile);
 
         //계수에 따른 projectile 공격력 초기화
-        newProjectile.GetComponent<Projectile>().projectile_Damage = player.attack_Damage * _skill_Coefficient;
+        newProjectile.GetComponent<Projectile>().projectile_Damage = Player.player.attack_Damage * _skill_Coefficient;
 
-        //스킬 시전자 초기화
-        newProjectile.GetComponent<Projectile>().shooter = player;
+        //스킬 속도 초기화
+        newProjectile.GetComponent<Projectile>().projectile_Speed = _skill_Speed;
 
         return newProjectile;
     }

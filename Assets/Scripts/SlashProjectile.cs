@@ -2,9 +2,12 @@ using UnityEngine;
 
 public class SlashProjectile : Projectile
 {
-    private void Start()
+    private Animator animator;
+
+    private void Awake()
     {
         base.Init();
+        animator = GetComponent<Animator>();
     }
 
     private void FixedUpdate()

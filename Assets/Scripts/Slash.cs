@@ -4,19 +4,18 @@ public class Slash : Skill
 {
     private void Start()
     {
-        base.Init();
         projectile = Resources.Load<GameObject>("SlashProjectile");
     }
 
     private void FixedUpdate()
     {
         //쿨타임마다 스킬 발동
-        if (current_Time >= cool_Time)
+        if (timerTime >= cool_Time)
         {
             EnableSkill();
-            current_Time = 0f;
+            timerTime = 0f;
         }
-        current_Time += Time.deltaTime;
+        timerTime += Time.deltaTime;
     }
 
     protected override void EnableSkill()
@@ -27,7 +26,7 @@ public class Slash : Skill
         newSlash.transform.position = this.transform.position;
 
         //플레이어가 반전된 상태인 경우 똑같이 반전
-        Vector3 newscale = player.transform.localScale;
+        Vector3 newscale = Player.player.transform.localScale;
         newSlash.transform.localScale = newscale;
     }
 }
