@@ -2,23 +2,32 @@ using UnityEngine;
 
 public abstract class Character : MonoBehaviour
 {
-    [SerializeField] private float _health_Point;       //체력
-    [SerializeField] private float _attack_Damage;      //공격력
-    [SerializeField] private float _defensive_Power;    //방어력
-    [SerializeField] private float _movement_Speed;     //이동속도
+    [SerializeField] private float _max_Heath_Point;        //최대 체력 
+    [SerializeField] private float _current_Health_Point;   //현재 체력 
 
+    [SerializeField] private float _attack_Damage;          //공격력
+    [SerializeField] private float _defensive_Power;        //방어력
+    [SerializeField] private float _movement_Speed;         //이동속도
 
     /*
     프로퍼티)
     */
-    public float health_Point
+
+    public float max_heath_Point
     {
-        get { return _health_Point; }
+        get { return _max_Heath_Point; }
+    }
 
-        set { _health_Point = value;
+    public float current_Health_Point
+    {
+        get { return _current_Health_Point; }
 
-            //체력이 0이하로 떨어진 경우 죽음 처리
-            if (_health_Point <= 0f)
+        set {
+            //1. 변경된 체력 적용
+            _current_Health_Point = value;
+
+            //2. 체력이 0이하로 떨어진 경우 죽음 처리
+            if (_current_Health_Point <= 0f)
                 OnDeath();        
         }
     }
@@ -34,9 +43,11 @@ public abstract class Character : MonoBehaviour
     }
     public float defensive_Power
     { 
-        get { return defensive_Power; } 
-        set { defensive_Power = value;}
+        get { return _defensive_Power; } 
+        set { _defensive_Power = value;}
     }
+
+    public bool isDead { get; protected set; }                   //플레이어 사망 유무
 
     /*
     추상 메소드)

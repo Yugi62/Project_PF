@@ -23,9 +23,19 @@ public class ThrustProjectile : Projectile
         timerTime += Time.deltaTime;
     }
 
-    public void Shoot(Vector2 direction)
+    public override void Shoot(Vector2 target, Vector2 shooter, int direction)
     {
-        rb2D.velocity = direction * _projectile_Speed;
+        //위치 초기화
+        transform.position = shooter;
+
+        //방향 초기화
+        Vector2 dir = (Vector3)target - transform.position;
+        float angle = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg;
+        Quaternion rotation = Quaternion.Euler(0, 0, angle - 90);
+        transform.rotation = rotation;
+
+        //투사체 발사
+        rb2D.velocity = dir * _projectile_Speed;
     }
 
     private void OnTriggerEnter2D(Collider2D collision)

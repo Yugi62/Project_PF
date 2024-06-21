@@ -1,4 +1,6 @@
 using UnityEngine;
+using UnityEngine.UIElements;
+using static UnityEngine.GraphicsBuffer;
 
 public class Slash : Skill
 {
@@ -20,13 +22,22 @@ public class Slash : Skill
 
     protected override void EnableSkill()
     {
+        //1. 투사체 생성
         GameObject newSlash = CreateProjectile();
 
-        //생성 위치 조정
-        newSlash.transform.position = this.transform.position;
+        //2. 서버에게 전송
+        if (ClientSystem.clientSystem != null)
+            ClientSystem.clientSystem.SendToServer(
+            "SlashProjectile" + "~" +
+                transform.position.x.ToString("F2") + "~" +
+                transform.position.y.ToString("F2") + "~" +
+                transform.position.x.ToString("F2") + "~" +
+                transform.position.y.ToString("F2") + "~" +
+                 ((int)Player.player.transform.localScale.x).ToString(),
+                ClientSystem.EchoType.PROJECTILE, false);
 
-        //플레이어가 반전된 상태인 경우 똑같이 반전
-        Vector3 newscale = Player.player.transform.localScale;
-        newSlash.transform.localScale = newscale;
+        //3. 투사체 발사
+        int dir = (int)Player.player.GetComponentInChildren<SpriteRenderer>().gameObject.transform.localScale.x;
+        newSlash.GetComponent<Projectile>().Shoot(transform.position, transform.position, dir);
     }
 }

@@ -1,6 +1,4 @@
-using UnityEngine;
-
-public class Increase_Defensive : Upgrade
+public class Upgrade_Defense : Upgrade
 {
     public override void Activate()
     {

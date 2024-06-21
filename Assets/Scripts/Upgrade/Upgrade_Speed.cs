@@ -1,6 +1,4 @@
-using UnityEngine;
-
-public class Increase_Speed : Upgrade
+public class Upgrade_Speed : Upgrade
 {
     public override void Activate()
     {

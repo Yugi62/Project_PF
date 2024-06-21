@@ -11,6 +11,13 @@ public class ChatSystem : MonoBehaviour
     private void Awake()
     {
         scrollRect = GetComponent<ScrollRect>();
+
+        if (ClientSystem.clientSystem != null)
+            ClientSystem.clientSystem.chat_Text = chat_Text;
+    }
+    private void Update()
+    {
+        scrollRect.verticalNormalizedPosition = 0;
     }
 
     public void OnEndEdit()
@@ -21,10 +28,12 @@ public class ChatSystem : MonoBehaviour
 
             chat_Text.text += text;
 
-            ClientSystem.clientSystem.SendToServer(text, ClientSystem.GameObjectType.MESSAGE);
+            if (ClientSystem.clientSystem != null)
+                ClientSystem.clientSystem.SendToServer(text, ClientSystem.EchoType.MESSAGE, false);
 
             chat_InputField.text = string.Empty;
-            scrollRect.normalizedPosition = new Vector2(0, 0);
         }
     }
+
+
 }

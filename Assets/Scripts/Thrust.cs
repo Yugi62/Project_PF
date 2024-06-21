@@ -14,6 +14,8 @@ public class Thrust : Skill
     }
     private void FixedUpdate()
     {
+        FollowPlayer();
+
         //주변에 적이 있는지 탐색
         Collider2D[] colliders = Physics2D.OverlapBoxAll(boxCollider.bounds.center, boxCollider.bounds.size, 0f, layerMask);
 
@@ -35,17 +37,19 @@ public class Thrust : Skill
     {
         //1. 투사체 생성
         GameObject thrustProjectile = CreateProjectile();
-        
-        //2. 위치 초기화
-        thrustProjectile.transform.position = transform.position;
 
-        //3. 방향 초기화
-        Vector2 direction = target.position - thrustProjectile.transform.position;
-        float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
-        Quaternion rotation = Quaternion.Euler(0, 0, angle - 90);
-        thrustProjectile.transform.rotation = rotation;        
+        //2. 서버에게 전송
+        if (ClientSystem.clientSystem != null)
+            ClientSystem.clientSystem.SendToServer(
+                "ThrustProjectile" + "~" +
+                target.position.x.ToString("F2") + "~" +
+                target.position.y.ToString("F2") + "~" +
+                transform.position.x.ToString("F2") + "~" +
+                transform.position.y.ToString("F2") + "~" +
+                 ((int)transform.localScale.x).ToString(),
+                ClientSystem.EchoType.PROJECTILE, false);
 
-        //4. 투사체 발사
-        thrustProjectile.GetComponent<ThrustProjectile>().Shoot(direction.normalized);
+        //3. 투사체 발사
+        thrustProjectile.GetComponent<ThrustProjectile>().Shoot(target.position, transform.position, (int)transform.localScale.x);  
     }
 }

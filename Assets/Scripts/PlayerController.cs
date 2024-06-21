@@ -5,11 +5,13 @@ public class PlayerController : MonoBehaviour
 {
     private InputActions action;
     private InputAction move_Action;
+    private Transform spriteTransform;
 
     private void Awake()
     {
         action = new InputActions();
         move_Action = action.Player.Move;
+        spriteTransform = GetComponentInChildren<SpriteRenderer>().gameObject.transform;
     }   
 
     private void FixedUpdate()
@@ -30,13 +32,13 @@ public class PlayerController : MonoBehaviour
 
     private void MovePlayer(Vector2 vec)
     {
-       this.transform.position = new Vector2(
-           this.transform.position.x + (vec.x * Player.player.movement_Speed),
-           this.transform.position.y + (vec.y * Player.player.movement_Speed));
+       transform.position = new Vector2(
+           transform.position.x + (vec.x * Player.player.movement_Speed),
+           transform.position.y + (vec.y * Player.player.movement_Speed));
 
         if (vec.x < 0)
-            this.transform.localScale = new Vector3(-1, 1, 1);
+            spriteTransform.localScale = new Vector3(-1, 1, 1);
         else if(vec.x > 0)
-            this.transform.localScale = new Vector3(1, 1, 1);
+            spriteTransform.localScale = new Vector3(1, 1, 1);
     }
 }
