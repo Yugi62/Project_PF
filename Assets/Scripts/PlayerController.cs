@@ -1,8 +1,11 @@
+using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
 public class PlayerController : MonoBehaviour
 {
+    [SerializeField] TMP_InputField inputField;
+
     private InputActions action;
     private InputAction move_Action;
     private Transform spriteTransform;
@@ -17,7 +20,9 @@ public class PlayerController : MonoBehaviour
     private void FixedUpdate()
     {
         Vector2 vec = move_Action.ReadValue<Vector2>();
-        MovePlayer(vec);
+
+        if (!inputField.isFocused)
+            MovePlayer(vec);
     }    
     
     private void OnEnable()

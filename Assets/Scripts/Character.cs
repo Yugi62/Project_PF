@@ -9,6 +9,12 @@ public abstract class Character : MonoBehaviour
     [SerializeField] private float _defensive_Power;        //방어력
     [SerializeField] private float _movement_Speed;         //이동속도
 
+    public Vector2 targetPosition;                          //이동할 위치
+    public bool isMoving = false;
+    public float speed = 0.25f;
+
+
+
     /*
     프로퍼티)
     */
@@ -49,8 +55,21 @@ public abstract class Character : MonoBehaviour
 
     public bool isDead { get; protected set; }                   //플레이어 사망 유무
 
+
     /*
     추상 메소드)
     */
     protected abstract void OnDeath();
+
+    /*
+    메소드)
+    */
+
+    public void MoveSmooth()
+    {
+
+    }
+
+
+
 }

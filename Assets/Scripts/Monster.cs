@@ -1,7 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using TMPro;
-using Unity.VisualScripting;
 using UnityEngine;
 
 public class Monster : Character
@@ -29,8 +28,8 @@ public class Monster : Character
         //경직이 해제된 경우에만 움직인다
         if (!isParalyzed)
         {
-            //타겟이 존재하면 path대로 움직인다 (코드 상 target이 존재하면 path도 존재한다)
-            if (hasTarget)
+            //타겟이 존재하면 path대로 움직인다
+            if (hasTarget && path != null)
             {
                 target = new Vector3(path[currentIndex].x, path[currentIndex].y, 1);                
                 
@@ -66,9 +65,9 @@ public class Monster : Character
     {
         //호스트인 경우 몬스터의 위치를 특정 시간마다 동기화
         if (ClientSystem.clientSystem != null && ClientSystem.clientSystem.isHost)
-            InvokeRepeating("SyncPosition", 0f, 5f);
+            InvokeRepeating("SyncPosition", 0f, 1.0f);
 
-        if (updatePathTime > 0f)
+       if (updatePathTime > 0f)
             InvokeRepeating("CreatePath", 0f, updatePathTime);
     }
 

@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.Tilemaps;
 
 public class GameSystem : MonoBehaviour
@@ -15,6 +16,7 @@ public class GameSystem : MonoBehaviour
 
     [SerializeField] private Transform startPoint;
 
+    [SerializeField] private GameObject lobby;
     [SerializeField] private Grid grid;
     [SerializeField] private Tilemap ground;
     [SerializeField] private Tilemap obstacle;
@@ -31,9 +33,8 @@ public class GameSystem : MonoBehaviour
     {
         //게임 시스템 싱글톤
         if (gameSystem == null)
-        {
             gameSystem = this;
-        }
+
         else
             Destroy(gameSystem);
 
@@ -75,16 +76,15 @@ public class GameSystem : MonoBehaviour
         playerCount.SetActive(false);
         disableStart.SetActive(false);
 
-        //타이머 시작
+        //타이머 시작 (타이머의 시간을 기준으로 몬스터를 생성)
         timer.isStarted = true;
 
         //업그레이드 카드 뽑기
         upgradeSystem.FirstDraw();
 
-        //맵으로 이동
-        Player.player.transform.position = startPoint.position;
-
-        //몬스터 스폰 시작
+        //맵 변경
+        lobby.SetActive(false);
+        grid.gameObject.SetActive(true);
     }
 
     private void CreateGrid()
@@ -135,5 +135,18 @@ public class GameSystem : MonoBehaviour
             Destroy(skill);
         
         skills.Clear();
+    }
+
+    public void CheckPlayerIsAllDead()
+    {
+        bool isAllDead = true;
+        foreach(Transform p in players)
+        {
+            if (!p.GetComponent<Character>().isDead)
+                isAllDead = false;
+        }
+
+        if (isAllDead)
+            ClientSystem.clientSystem.ResetGame();        
     }
 }

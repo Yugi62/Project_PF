@@ -283,7 +283,7 @@ Transform:
   m_GameObject: {fileID: 8000363704752558655}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: -6, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -370,3 +370,6 @@ MonoBehaviour:
   _attack_Damage: 0
   _defensive_Power: 0
   _movement_Speed: 0
+  targetPosition: {x: 0, y: 0}
+  isMoving: 0
+  speed: 20

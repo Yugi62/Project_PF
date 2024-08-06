@@ -16,7 +16,7 @@ public class Player : Character
     [SerializeField] private int blinkCount = 5;
 
     private Rigidbody2D rb;                                     //리지드 바디
-    private Material material;                                  //쉐이더 적용용 메테리얼
+    private Material material;                                  //쉐이더 메테리얼
 
     private bool isHit = false;                                 //타격된 유무 (= 현재 무적인 상태)
     private PlayerHP hpBar;                                     //인게임 HP 표시 UI
@@ -69,6 +69,9 @@ public class Player : Character
 
     private void LevelUp()
     {
+        //레벨 증가
+        _player_Level++;
+
         //레벨업 시 업그레이드 UI 출력
         upgradeSystem.Draw();
 
@@ -93,6 +96,9 @@ public class Player : Character
         //벽 통과 허용
         CapsuleCollider2D collider = GetComponent<CapsuleCollider2D>();
         collider.excludeLayers = 1 << LayerMask.NameToLayer("Obstacle");
+
+        //플레이어가 모두 죽었는지 확인
+        GameSystem.gameSystem.CheckPlayerIsAllDead();
     }
 
     private void OnTriggerEnter2D(Collider2D collision)
@@ -106,8 +112,8 @@ public class Player : Character
                 //무적이 아닌 경우
                 if (!isHit)
                 {
-                    //고정 5데미지 (임시)
-                    int tempDamage = 5;
+                    //고정 1데미지 (임시)
+                    int tempDamage = 1;
 
                     //1. 서버에게 적용된 데미지를 전송 
                     if (ClientSystem.clientSystem != null)

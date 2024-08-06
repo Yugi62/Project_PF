@@ -1,16 +1,29 @@
-using System.Runtime.CompilerServices;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
 public class Pause : MonoBehaviour
 {
-    /*
-    에디터 내에서 스레드가 정상적으로 종료되지 않아 임시로 만든 스크립트임
-    */
+    [SerializeField] GameObject menu;
 
-    public void PauseExit()
+    public void OnPauseButton()
     {
-        ClientSystem.clientSystem.StopReceive();
-        SceneManager.LoadScene(0);
+        menu.SetActive(true);
+    }
+
+    public void OnCheckButton()
+    {
+        if (ClientSystem.clientSystem != null)
+        {
+            ClientSystem.clientSystem.StopReceive();
+            Destroy(ClientSystem.clientSystem.gameObject);
+        }
+
+        if (SceneManager.GetActiveScene().buildIndex == 1)
+            SceneManager.LoadScene(0);
+    }
+
+    public void OnCrossButton()
+    {
+        menu.SetActive(false);
     }
 }

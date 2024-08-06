@@ -68,6 +68,7 @@ public class ClientSystem : MonoBehaviour
 
     private Queue<string> spawnQueue = new Queue<string>();
     private Queue<string> moveQueue = new Queue<string>();
+    private Queue<string> playerMoveQueue = new Queue<string>();
     private Queue<string> attackQueue = new Queue<string>();
     private Queue<string> projectileQueue = new Queue<string>();
     private Queue<string> disconnectQueue = new Queue<string>();
@@ -77,21 +78,23 @@ public class ClientSystem : MonoBehaviour
         //클라이언트 시스템 싱글톤
         if (clientSystem == null)
         {
+            Debug.Log("created");
+
             clientSystem = this;
-            DontDestroyOnLoad(clientSystem);
+            DontDestroyOnLoad(gameObject);
+
+            //IOCP 최소 스레드 수 설정
+            ThreadPool.SetMinThreads(48, 48);
+
+            //소켓 생성 (UDP)
+            clntSock = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+
+            //프로퍼티 초기화
+            isConnected = false;
+            _isHost = false;
         }
         else
-            Destroy(clientSystem);
-
-        //IOCP 최소 스레드 수 설정
-        ThreadPool.SetMinThreads(24, 24);
-
-        //소켓 생성 (UDP)
-        clntSock = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-
-        //프로퍼티 초기화
-        isConnected = false;
-        _isHost = false;
+            Destroy(this);
     }
 
     private void Update()
@@ -108,15 +111,17 @@ public class ClientSystem : MonoBehaviour
             }
         }
 
+        //서버에 연결이 된 경우
         if(isConnected)
         {
+            //0번 씬인 경우 1번 씬으로 전환 (lobbyScene -> GameScene)
             if(SceneManager.GetActiveScene().buildIndex == 0)            
                 SceneManager.LoadScene(1);            
 
             //플레이어의 위치가 바뀔 때마다 실시간으로 서버에게 전송
             if (Player.player != null)
             {
-                if (playerPosition != (Vector2)Player.player.transform.position)
+                if (Vector2.Distance(playerPosition, Player.player.transform.position) >= 0.25f)
                 {
                     playerPosition = Player.player.transform.position;
                     playerDirection = Player.player.GetComponentInChildren<SpriteRenderer>().gameObject.transform.localScale.x;
@@ -132,24 +137,63 @@ public class ClientSystem : MonoBehaviour
                 {
                     string buffer = spawnQueue.Peek();
                     spawnQueue.Dequeue();
-                    string[] splitedBuffer = buffer.Split("~");
 
-                    GameObject gameObject = Resources.Load<GameObject>(splitedBuffer[1]);
-
-                    GameObject newObject = Instantiate(gameObject);
-                    newObject.name = splitedBuffer[0];
-                    newObject.transform.position = new Vector2(float.Parse(splitedBuffer[2]), float.Parse(splitedBuffer[3]));
-
-                    //방향 초기화 제대로 안되는 것
-                    //newObject.transform.localScale = new Vector3(float.Parse(splitedBuffer[4]), 1, 1);
-
-                    //생성한 게임 오브젝트가 플레이어인 경우
-                    if (newObject.CompareTag("Player"))
+                    if (buffer != null)
                     {
-                        //플레이어 목록에 추가
-                        GameSystem.gameSystem.players.Add(newObject.transform);
-                        //인게임 UI의 텍스트를 이름으로 초기화
-                        newObject.GetComponentInChildren<TMP_Text>().text = newObject.name;
+                        string[] splitedBuffer = buffer.Split("~");
+
+                        GameObject gameObject = Resources.Load<GameObject>(splitedBuffer[1]);
+
+                        Vector2 spawnPosition = new Vector2(float.Parse(splitedBuffer[2]), float.Parse(splitedBuffer[3]));
+                        GameObject newObject = Instantiate(gameObject, spawnPosition, Quaternion.identity);
+                        newObject.name = splitedBuffer[0];
+
+                        //Sprite 좌우반전
+                        newObject.GetComponentInChildren<SpriteRenderer>().gameObject.transform.localScale = new Vector3(float.Parse(splitedBuffer[4]), 1, 1);
+
+                        //생성한 게임 오브젝트가 플레이어인 경우
+                        if (newObject.CompareTag("Player"))
+                        {
+                            //플레이어 목록에 추가
+                            GameSystem.gameSystem.players.Add(newObject.transform);
+                            //인게임 UI의 텍스트를 이름으로 초기화
+                            newObject.GetComponentInChildren<TMP_Text>().text = newObject.name;
+                        }
+
+                        splitedBuffer = null;
+                    }
+                }
+
+                //플레이어 이동 큐 (이름~position.x~position.y~방향)
+                if (playerMoveQueue.Count != 0)
+                {
+                    string buffer = playerMoveQueue.Peek();
+                    playerMoveQueue.Dequeue();
+
+                    if (buffer != null)
+                    {
+                        string[] splitedBuffer = buffer.Split("~");
+
+                        GameObject gameObject = GameObject.Find(splitedBuffer[0]);
+
+                        if (gameObject != null)
+                        {
+                            Character character = gameObject.GetComponent<Character>();
+
+                            if (character != null)
+                            {
+                                gameObject.GetComponentInChildren<SpriteRenderer>().gameObject.transform.localScale = new Vector3(float.Parse(splitedBuffer[3]), 1, 1);
+                                character.targetPosition = new Vector2(float.Parse(splitedBuffer[1]), float.Parse(splitedBuffer[2]));
+                                character.isMoving = true;
+                            }
+
+                            //이동하려는 오브젝트가 몬스터인 경우 경로를 재생성
+                            Monster monster = gameObject.GetComponent<Monster>();
+                            if (monster != null)
+                                monster.CreatePath();
+                        }
+
+                        splitedBuffer = null;
                     }
                 }
 
@@ -157,19 +201,32 @@ public class ClientSystem : MonoBehaviour
                 if (moveQueue.Count != 0)
                 {
                     string buffer = moveQueue.Peek();
-                    moveQueue.Dequeue();
-                    string[] splitedBuffer = buffer.Split("~");
+                    moveQueue.Dequeue();                    
 
-                    GameObject gameObject = GameObject.Find(splitedBuffer[0]);
-
-                    if(gameObject != null)
+                    if (buffer != null)
                     {
-                        gameObject.transform.position = new Vector2(float.Parse(splitedBuffer[1]), float.Parse(splitedBuffer[2]));
-                        gameObject.GetComponentInChildren<SpriteRenderer>().gameObject.transform.localScale = new Vector3(float.Parse(splitedBuffer[3]), 1, 1);
+                        string[] splitedBuffer = buffer.Split("~");
 
-                        Monster monster = gameObject.GetComponent<Monster>();
-                        if (monster != null)
-                            monster.CreatePath();
+                        GameObject gameObject = GameObject.Find(splitedBuffer[0]);
+
+                        if (gameObject != null)
+                        {
+                            Character character = gameObject.GetComponent<Character>();
+
+                            if(character != null)
+                            {
+                                gameObject.GetComponentInChildren<SpriteRenderer>().gameObject.transform.localScale = new Vector3(float.Parse(splitedBuffer[3]), 1, 1);
+                                character.targetPosition = new Vector2(float.Parse(splitedBuffer[1]), float.Parse(splitedBuffer[2]));
+                                character.isMoving = true;
+                            }
+
+                            //이동하려는 오브젝트가 몬스터인 경우 경로를 재생성
+                            Monster monster = gameObject.GetComponent<Monster>();
+                            if (monster != null)
+                                monster.CreatePath();
+                        }
+
+                        splitedBuffer = null;
                     }
                 }
 
@@ -178,27 +235,43 @@ public class ClientSystem : MonoBehaviour
                 {
                     string buffer = attackQueue.Peek();
                     attackQueue.Dequeue();
-                    string[] splitedBuffer = buffer.Split("~");
 
-                    GameObject gameObject = GameObject.Find(splitedBuffer[0]);
+                    if (buffer != null)
+                    {
+                        string[] splitedBuffer = buffer.Split("~");
 
-                    if (gameObject != null)
-                        gameObject.GetComponent<Character>().current_Health_Point -= float.Parse(splitedBuffer[1]);
+                        GameObject gameObject = GameObject.Find(splitedBuffer[0]);
+
+                        if (gameObject != null)
+                            gameObject.GetComponent<Character>().current_Health_Point -= float.Parse(splitedBuffer[1]);
+
+                        splitedBuffer = null;
+                    }
                 }
 
-                //투사체 큐 (프리팹~target.x~taget.y~shooter.x~shooter.y)
+                //투사체 큐 (프리팹~target.x~taget.y~shooter.x~shooter.y~scale.x)
                 if(projectileQueue.Count != 0)
                 {
                     string buffer = projectileQueue.Peek();
                     projectileQueue.Dequeue();
-                    string[] splitedBuffer = buffer.Split("~");
 
-                    Vector2 target = new Vector2(float.Parse(splitedBuffer[1]), float.Parse(splitedBuffer[2]));
-                    Vector2 shooter = new Vector2(float.Parse(splitedBuffer[3]), float.Parse(splitedBuffer[4]));
-                    int direction = int.Parse(splitedBuffer[5]);
+                    if (buffer != null)
+                    {
+                        string[] splitedBuffer = buffer.Split("~");
 
-                    GameObject newObject = Instantiate(Resources.Load<GameObject>(splitedBuffer[0]));
-                    newObject.GetComponent<Projectile>().Shoot(target, shooter, direction);
+                        Vector2 target = new Vector2(float.Parse(splitedBuffer[1]), float.Parse(splitedBuffer[2]));
+                        Vector2 shooter = new Vector2(float.Parse(splitedBuffer[3]), float.Parse(splitedBuffer[4]));
+                        int direction = int.Parse(splitedBuffer[5]);
+
+                        GameObject newObject = Instantiate(Resources.Load<GameObject>(splitedBuffer[0]));
+
+                        if (splitedBuffer[5] != null)
+                            newObject.transform.localScale = new Vector3(int.Parse(splitedBuffer[5]), 1, 1);
+
+                        newObject.GetComponent<Projectile>().Shoot(target, shooter, direction);
+
+                        splitedBuffer = null;
+                    }
                 }
 
                 //연결해제 큐 (이름)
@@ -206,19 +279,25 @@ public class ClientSystem : MonoBehaviour
                 {
                     string buffer = disconnectQueue.Peek();
                     disconnectQueue.Dequeue();
-                    string[] splitedBuffer = buffer.Split("~");
 
-                    GameObject disconnectedPlayer = GameObject.Find(splitedBuffer[0]);
-
-                    //인게임에 존재하는 플레이어 제거
-                    if (disconnectedPlayer != null)
-                        Destroy(disconnectedPlayer);
-
-                    //플레이어 목록을 순회하면서 동일한 이름인 경우의 제거
-                    for (int i = 0; i < GameSystem.gameSystem.players.Count; i++)
+                    if (buffer != null)
                     {
-                        if (GameSystem.gameSystem.players[i].name == splitedBuffer[0])
-                            GameSystem.gameSystem.players.RemoveAt(i);
+                        string[] splitedBuffer = buffer.Split("~");
+
+                        GameObject disconnectedPlayer = GameObject.Find(splitedBuffer[0]);
+
+                        //인게임에 존재하는 플레이어 제거
+                        if (disconnectedPlayer != null)
+                            Destroy(disconnectedPlayer);
+
+                        //플레이어 목록을 순회하면서 동일한 이름인 경우의 제거
+                        for (int i = 0; i < GameSystem.gameSystem.players.Count; i++)
+                        {
+                            if (GameSystem.gameSystem.players[i].name == splitedBuffer[0])
+                                GameSystem.gameSystem.players.RemoveAt(i);
+                        }
+
+                        splitedBuffer = null;
                     }
                 }
 
@@ -287,182 +366,194 @@ public class ClientSystem : MonoBehaviour
     {
         while (isReceving)
         {
-            EndPoint remoteEP = new IPEndPoint(IPAddress.Any, 0);
-            SocketAsyncEventArgs receiveEventArgs = new SocketAsyncEventArgs();
-            receiveEventArgs.Completed += ReceiveCompleted;
-            receiveEventArgs.RemoteEndPoint = remoteEP;
-            receiveEventArgs.SetBuffer(buffer, 0, BUF_SIZE);
-
             //소켓 버퍼에 패킷이 있는 경우 비동기 수신 시작
-            if (clntSock.Available > 0)            
+            if (clntSock.Available > 0)
+            {
+                EndPoint remoteEP = new IPEndPoint(IPAddress.Any, 0);
+                SocketAsyncEventArgs receiveEventArgs = new SocketAsyncEventArgs();
+                receiveEventArgs.Completed += ReceiveCompleted;
+                receiveEventArgs.RemoteEndPoint = remoteEP;
+                receiveEventArgs.SetBuffer(buffer, 0, BUF_SIZE);                
+
                 clntSock.ReceiveFromAsync(receiveEventArgs);
+            }
         }
     }
     private void ReceiveCompleted(object sender, SocketAsyncEventArgs e)
     {
-        string buffer = Encoding.UTF8.GetString(e.Buffer);
-        string packetBuffer = FixBuffer(buffer);        
-        PacketType packetType = GetPacketType(buffer);
-
-        //서버와 연결되어 있지 않은 경우
-        if (isConnecting && !isConnected)
+        if (isReceving)
         {
-            if(packetType == PacketType.ACCEPT)
+
+            string buffer = Encoding.UTF8.GetString(e.Buffer);
+            string packetBuffer = FixBuffer(buffer);
+            PacketType packetType = GetPacketType(buffer);
+
+            //서버와 연결되어 있지 않은 경우
+            if (isConnecting && !isConnected)
             {
-                //앞 한 자리와 뒤에 다섯 자리는 서버가 패킷을 구분하기 위해 있는 것이므로 사용하지 않는다
-                string name = packetBuffer.Substring(1);
-                name = name.Substring(0, name.Length - 5);
-
-                if (name == Name_InputField.text)
+                if (packetType == PacketType.ACCEPT)
                 {
-                    playerName = Name_InputField.text;
+                    //앞 한 자리와 뒤에 다섯 자리는 서버가 패킷을 구분하기 위해 있는 것이므로 사용하지 않는다
+                    string name = packetBuffer.Substring(1);
+                    name = name.Substring(0, name.Length - 5);
 
-                    isConnecting = false;
-                    timerTime = 0f;
-                    isConnected = true;
-
-                    //서버에게 접속이 완료되었음을 알림
-                    SendToServer("1" + packetBuffer.Substring(1), PacketType.ACCEPT);
-                    //서버에게 정보 요청 (최초 접속 시)
-                    SendToServer("", PacketType.INIT);
-                    //다른 클라이언트에게 현 플레이어를 생성하라고 에코
-                    SendToServer(playerName + "~" + prefabName + "~" + playerPosition.x.ToString("F2") + "~" + playerPosition.y.ToString("F2") + "~" + playerDirection.ToString(), EchoType.SPAWN, true);
-                }
-                else
-                {
-                    StopReceive();
-                    timerTime = 0f;
-                    isConnecting = false;
-                    error_Text.text = "This player already exists";
-                }
-            }
-        }
-
-
-
-
-
-        //서버와 연결된 경우
-        else if(isConnected)
-        {
-            switch (packetType)
-            {
-                case PacketType.HOST:
-                    _isHost = true;
-                    SendToServer(packetBuffer, PacketType.HOST);
-                    break;
-
-
-
-
-
-                //최초 접속 시 다른 플레이어의 정보를 서버로부터 요청하거나 전달
-                case PacketType.INIT:
-
-                    if (packetBuffer.Contains('~'))
+                    //사용되는 부분을 추출하여 그것이 이름이 맞는 경우 연결된 것으로 처리
+                    if (name == Name_InputField.text)
                     {
-                        spawnQueue.Enqueue(packetBuffer);
+                        playerName = Name_InputField.text;
 
-                        packetBuffer = packetBuffer + "~1";
+                        isConnecting = false;
+                        timerTime = 0f;
+                        isConnected = true;
 
-                        SendToServer(packetBuffer, PacketType.INIT);
+                        //서버에게 접속이 완료되었음을 알림
+                        SendToServer("1" + packetBuffer.Substring(1), PacketType.ACCEPT);
+                        //서버에게 정보 요청 (최초 접속 시)
+                        SendToServer("", PacketType.INIT);
+                        //다른 클라이언트에게 현 플레이어를 생성하라고 에코 (씬 전환 전이므로 실제 플레이어의 위치를 가져올 수가 없으므로 고정 스폰 위치를 전송)
+                        SendToServer(playerName + "~" + prefabName + "~" + "-6.00" + "~" + "0.00" + "~" + playerDirection.ToString(), EchoType.SPAWN, true);
+
                     }
                     else
                     {
-                        packetBuffer += "~" + playerName + "~" + prefabName + "~" + playerPosition.x.ToString("F2") + "~" + playerPosition.y.ToString("F2") + "~" + playerDirection.ToString() + "~0";
-                        SendToServer(packetBuffer, PacketType.INIT);
-                        Debug.Log("1");
+                        StopReceive();
+                        timerTime = 0f;
+                        isConnecting = false;
+                        error_Text.text = "This player already exists";
                     }
-                    break;
-
-
-
-
-
-                //Ping을 받은 경우 ping에 1을 더한 후 서버에게 전송
-                case PacketType.PING:
-                    int currentPing = int.Parse(packetBuffer);
-                    currentPing++;
-                    SendToServer(currentPing.ToString(), PacketType.PING); 
-                    break;
-
-
-
-
-
-                //다른 클라이언트에게 받은 패킷 적용
-                case PacketType.ECHO:                    
-                    EchoType echoType = (EchoType)int.Parse(packetBuffer.Substring(0, 2));
-                    packetBuffer = packetBuffer.Substring(2);
-
-                    //EchoType에 따라 작업을 분리
-                    switch (echoType)
-                    {                  
-                        //이거 UI 제대로 작동되게 수정해 이동 다 만들고 (UI가 안내려감)
-                        case EchoType.MESSAGE:                            
-                            chat_Text.text += packetBuffer;
-                            break;
-
-                        case EchoType.MOVE:       
-                            moveQueue.Enqueue(packetBuffer);
-                            break;
-
-                        case EchoType.PROJECTILE:
-                            projectileQueue.Enqueue(packetBuffer);
-                            break;
-
-                        default:                            
-                            break;
-                    }
-
-                    break;
-
-
-
-
-
-                //다른 클라이언트로부터 받은 패킷 적용 + 서버에게 전송하여 받았음을 알림
-                case PacketType.CRIT:
-
-                    EchoType critType = (EchoType)int.Parse(packetBuffer.Substring(0, 2));
-                    string subBuffer = packetBuffer.Substring(2);
-
-                    //고유번호로 중복적용 방지
-                    int cnt = int.Parse(subBuffer.Substring(subBuffer.Length - 4, 4));
-                    if (critCnt >= cnt)                    
-                        break;                    
-                    else
-                        critCnt = cnt;
-
-                    //EchoType에 따라 작업을 분리
-                    switch (critType)
-                    {
-                        case EchoType.START:
-                            GameSystem.gameSystem.isGameStarted = true;
-                            break;
-
-                        case EchoType.ATTACK:
-                            attackQueue.Enqueue(subBuffer);
-                            break;
-
-                        case EchoType.SPAWN:
-                            spawnQueue.Enqueue(subBuffer);
-                            break;
-
-                        case EchoType.DISCONNECT:
-                            disconnectQueue.Enqueue(subBuffer);
-                            break;
-
-                        default:
-                            break;
-                    }
-
-                    //1을 앞에 붙여 서버에게 제대로 받았음을 알림
-                    packetBuffer = "1" + packetBuffer;
-                    SendToServer(packetBuffer, PacketType.CRIT);
-                    break;
+                }
             }
-        }     
+
+
+
+
+
+            //서버와 연결된 경우
+            else if (isConnected)
+            {
+                switch (packetType)
+                {
+                    case PacketType.HOST:
+                        _isHost = true;
+                        SendToServer(packetBuffer, PacketType.HOST);
+                        break;
+
+
+
+
+
+                    //최초 접속 시 다른 플레이어의 정보를 서버로부터 요청하거나 전달
+                    case PacketType.INIT:
+
+                        if (packetBuffer.Contains('~'))
+                        {
+                            spawnQueue.Enqueue(packetBuffer);
+                            SendToServer(packetBuffer, PacketType.INIT);
+                        }
+                        else
+                        {
+                            packetBuffer += "~" + playerName + "~" + prefabName + "~" + playerPosition.x.ToString("F2") + "~" + playerPosition.y.ToString("F2") + "~" + playerDirection.ToString();
+                            SendToServer(packetBuffer, PacketType.INIT);
+                        }
+                        break;
+
+
+
+
+
+                    //Ping을 받은 경우 Ping에 1을 더한 후 서버에게 전송
+                    case PacketType.PING:
+                        int currentPing = int.Parse(packetBuffer);
+                        currentPing++;
+                        SendToServer(currentPing.ToString(), PacketType.PING);
+                        break;
+
+
+
+
+
+                    //다른 클라이언트에게 받은 패킷 적용
+                    case PacketType.ECHO:
+                        EchoType echoType = (EchoType)int.Parse(packetBuffer.Substring(0, 2));
+                        packetBuffer = packetBuffer.Substring(2);
+
+                        //EchoType에 따라 작업을 분리
+                        switch (echoType)
+                        {
+                            //이거 UI 제대로 작동되게 수정해 이동 다 만들고 (UI가 안내려감)
+                            case EchoType.MESSAGE:
+                                chat_Text.text += packetBuffer;
+                                break;
+
+                            case EchoType.MOVE:
+                                string name = packetBuffer.Substring(0, 8);
+
+                                if (name == "Monster_")
+                                    moveQueue.Enqueue(packetBuffer);
+                                else
+                                    playerMoveQueue.Enqueue(packetBuffer);
+                                break;
+
+                            case EchoType.PROJECTILE:
+                                projectileQueue.Enqueue(packetBuffer);
+                                break;
+
+                            default:
+                                break;
+                        }
+
+                        break;
+
+
+
+
+
+                    //다른 클라이언트로부터 받은 패킷 적용 + 서버에게 전송하여 받았음을 알림
+                    case PacketType.CRIT:
+
+                        EchoType critType = (EchoType)int.Parse(packetBuffer.Substring(0, 2));
+                        string subBuffer = packetBuffer.Substring(2);
+
+                        //고유번호로 중복적용 방지
+                        int cnt = int.Parse(subBuffer.Substring(subBuffer.Length - 4, 4));
+                        if (critCnt >= cnt)
+                            break;
+                        else
+                            critCnt = cnt;
+
+                        //EchoType에 따라 작업을 분리
+                        switch (critType)
+                        {
+                            case EchoType.START:
+                                GameSystem.gameSystem.isGameStarted = true;
+                                break;
+
+                            case EchoType.ATTACK:
+                                attackQueue.Enqueue(subBuffer);
+                                break;
+
+                            case EchoType.SPAWN:
+                                spawnQueue.Enqueue(subBuffer);
+                                break;
+
+                            case EchoType.DISCONNECT:
+                                disconnectQueue.Enqueue(subBuffer);
+                                break;
+
+                            default:
+                                break;
+                        }
+
+                        //1을 앞에 붙여 서버에게 제대로 받았음을 알림
+                        packetBuffer = "1" + packetBuffer;
+                        SendToServer(packetBuffer, PacketType.CRIT);
+                        break;
+                }
+            }
+
+            buffer = null;
+            packetBuffer = null;
+        } 
     }
     public void SendToServer(string str, EchoType echoType, bool isCrit)
     {
@@ -484,6 +575,7 @@ public class ClientSystem : MonoBehaviour
             //재전송이 필요한 패킷을 보내는 경우 "0"을 packetType과 str 사이에 삽입 ("0" : 재전송을 보장한 에코를 부탁, "1" : 서버에게 제대로 받았음을 알림) 
             if (isCrit)
                 bufferToSend = Encoding.UTF8.GetBytes(SetPacketType(str, PacketType.CRIT).Insert(2, "0"));
+
             //재전송이 필요없는 경우
             else
                 bufferToSend = Encoding.UTF8.GetBytes(SetPacketType(str, PacketType.ECHO));
@@ -508,7 +600,6 @@ public class ClientSystem : MonoBehaviour
     {
         /*
         FixBuffer : buffer에서 사용되는 부분만 잘라서 반환 (PacketType 부분도 같이 자른다)
-
         */
 
         buffer = buffer.Substring(0, buffer.IndexOf('\0'));
@@ -519,7 +610,6 @@ public class ClientSystem : MonoBehaviour
     {
         /*
         GetPacketType : 서버로부터 받은 버퍼의 앞 두 글자(패킷의 용도)를 받아 PacketType으로 반환 
-
         */
 
         buffer = buffer.Substring(0, 2);
@@ -538,6 +628,19 @@ public class ClientSystem : MonoBehaviour
         original = typeString + original;
         return original;
     }
+    public void ResetGame()
+    {
+        /*
+        ResetGame : 게임 리셋 작업 실시
+         1. GameScence을 재로드
+         2. 서버로부터 다른 플레이어들의 정보를 수신받기 위해 요청
+        */
+
+        Scene scene = SceneManager.GetActiveScene();
+        SceneManager.LoadScene(scene.name);
+        clientSystem.SendToServer("", ClientSystem.PacketType.INIT);
+    }
+
     private void OnApplicationQuit()
     {
         if(receiveThread != null)

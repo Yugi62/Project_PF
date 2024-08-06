@@ -5,6 +5,7 @@ using UnityEngine;
 public class MonsterSpawner : MonoBehaviour
 {
     /*
+    주의 사항
     1. 호스트인 경우에만 스폰
     2. 몬스터 이름이 절대 겹치지 않게 규칙을 생성
     */
@@ -17,6 +18,8 @@ public class MonsterSpawner : MonoBehaviour
 
     private GameObject ork;
     private GameObject ghost;
+    private GameObject greenGhost;
+    private GameObject magician;
 
     private int monsterCount = 0;
 
@@ -24,6 +27,8 @@ public class MonsterSpawner : MonoBehaviour
     {
         ork = Resources.Load<GameObject>("Ork");
         ghost = Resources.Load<GameObject>("Ghost");
+        greenGhost = Resources.Load<GameObject>("GreenGhost");
+        magician = Resources.Load<GameObject>("Magician");
 
         spawnPhases = new SpawnPhase[transform.childCount];
         for (int i = 0; i < spawnPhases.Length; i++)
@@ -79,6 +84,12 @@ public class MonsterSpawner : MonoBehaviour
 
             case "Ghost":
                 return ghost;
+
+            case "GreenGhost":
+                return greenGhost;
+
+            case "Magician":
+                return magician;
 
             default:
                 return null;

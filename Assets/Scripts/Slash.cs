@@ -18,6 +18,8 @@ public class Slash : Skill
             timerTime = 0f;
         }
         timerTime += Time.deltaTime;
+
+        
     }
 
     protected override void EnableSkill()
@@ -33,7 +35,7 @@ public class Slash : Skill
                 transform.position.y.ToString("F2") + "~" +
                 transform.position.x.ToString("F2") + "~" +
                 transform.position.y.ToString("F2") + "~" +
-                 ((int)Player.player.transform.localScale.x).ToString(),
+                ((int)Player.player.GetComponentInChildren<SpriteRenderer>().gameObject.transform.localScale.x).ToString(),
                 ClientSystem.EchoType.PROJECTILE, false);
 
         //3. 투사체 발사
