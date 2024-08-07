@@ -17,11 +17,10 @@ using namespace std;
 
 
 
-#define BUF_SIZE 1024
-#define PINGTHREAD_WAIT_TIME 1000
-#define MAX_DISCONNECT_COUNT 3
-#define CRIT_TIME_OUT 5
-
+#define BUF_SIZE 1024                    //버퍼의 최대 사이즈
+#define PINGTHREAD_WAIT_TIME 1000        //PingThread가 ACK 전송 후 최대 대기 시간
+#define CRITTHREAD_WAIT_TIME 1000        //CritThread가 패킷 전송 후 최대 대기 시간
+#define MAX_DISCONNECT_COUNT 3           //연결을 해제할 카운트의 개수
 
 
 //송수신용 구조체
@@ -48,11 +47,11 @@ enum PacketType
 
 struct Player
 {
-	SOCKADDR_IN addr;				//플레이어의  IP/Port
-	string name;					//플레이어 이름
-	bool isHost = false;			//플레이어의 호스트 유무
-	int ping;						//4자리 숫자 (서버 ping과 플레이어의 ping이 일치하는지 확인하기 위한 용도)
-	int disconnectCnt = 0;			//연결 해제 카운트 (일정량 이상이 되면 연결해제)
+	SOCKADDR_IN addr;          //플레이어의  IP/Port
+	string name;               //플레이어 이름
+	bool isHost = false;       //플레이어의 호스트 유무
+	int ping;                  //4자리 숫자 (서버 ping과 플레이어의 ping이 일치하는지 확인하기 위한 용도)
+	int disconnectCnt = 0;     //연결 해제 카운트 (일정량 이상이 되면 연결해제)
 };
 bool operator==(const Player& a, const Player& b)
 {
@@ -74,6 +73,7 @@ bool operator==(const SOCKADDR_IN& a, const SOCKADDR_IN& b)
 
 	return false;
 }
+
 
 list<Player> playerList;
 map<string, list<SOCKADDR_IN>> critMap;
@@ -231,7 +231,7 @@ unsigned WINAPI IOCPThread(void* arg)
 			2. 서버 -> 클라이언트 (접속 확인)
 
 			3. 클라이언트 -> 서버 (접속 확인)
-				3번 실패 시 서버에서 2번을 CRIT_TIME_OUT일 때까지 재시도			
+				3번 실패 시 서버에서 2번을 CRITTHREAD_WAIT_TIME일 때까지 재시도			
 
 			*/
 
@@ -556,7 +556,7 @@ void CritThread(void* arg)
 		critMap_mtx.unlock();
 
 		//2. 대기
-		this_thread::sleep_for(chrono::milliseconds(1000));
+		this_thread::sleep_for(chrono::milliseconds(CRITTHREAD_WAIT_TIME));
 		
 		//3. 특정 시간 내로 스레드를 탈출 못하면 break
 		waitTime += 1000;
