@@ -19,3 +19,4 @@ UDP로 통신하는 멀티스레드 IOCP 서버와 유니티로 만들어진 클
 #### 통신
 ![1](https://github.com/user-attachments/assets/740b74a7-4dd8-413b-9ea5-e886e56354e1)
 #### 패킷 손실 방지 통신
+![2](https://github.com/user-attachments/assets/f679a235-b4e8-4a6d-82b2-a8feb553bf54)
