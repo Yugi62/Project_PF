@@ -15,7 +15,7 @@ UDP로 통신하는 멀티스레드 IOCP 서버와 유니티로 만들어진 클
 ### 동작과정
 ---
 #### 연결 및 연결 해제
-![0](https://github.com/user-attachments/assets/6db11e94-dad0-4fcb-9ae4-1432e0d52593)
+![0](https://github.com/user-attachments/assets/16f07215-a83e-45ae-bce7-c2c9f35fddcd)
 #### 통신
 ![1](https://github.com/user-attachments/assets/740b74a7-4dd8-413b-9ea5-e886e56354e1)
 #### 패킷 손실 방지 통신
