@@ -20,3 +20,7 @@ UDP로 통신하는 멀티스레드 IOCP 서버와 유니티로 만들어진 클
 ![1](https://github.com/user-attachments/assets/3cfc09fb-e21d-4fb8-8e72-6ab6fee73386)
 #### 패킷 손실 방지 통신
 ![2](https://github.com/user-attachments/assets/418fbb23-a719-442b-8068-08ab57db7322)
+
+### 플레이 영상
+---
+[유튜브](https://youtu.be/RM8u36wIGGU)
